@@ -36,11 +36,9 @@ import io.seata.core.constants.ConfigurationKeys;
 import io.seata.core.raft.AbstractRaftServer;
 import io.seata.core.raft.AbstractRaftStateMachine;
 import io.seata.core.raft.RaftServer;
-import io.seata.core.raft.RaftServerFactory;
 import org.apache.commons.io.FileUtils;
 
 
-import static io.seata.common.DefaultValues.SEATA_RAFT_GROUP;
 import static io.seata.core.raft.AbstractRaftServer.RAFT_TAG;
 
 /**
@@ -105,14 +103,12 @@ public class RaftServerImpl extends AbstractRaftServer implements ConfigurationC
 
     @Override
     public void onChangeEvent(ConfigurationChangeEvent event) {
-        if (RaftServerFactory.getInstance().isLeader()
-            && ConfigurationKeys.SERVER_RAFT_CLUSTER.equals(event.getDataId())) {
+        if (ConfigurationKeys.SERVER_RAFT_CLUSTER.equals(event.getDataId())) {
             final Configuration newConf = new Configuration();
             if (newConf.parse(event.getNewValue())) {
                 Node node = getNode();
                 if (node != null && node.isLeader()) {
-                    CliService cliService = getCliService();
-                    cliService.changePeers(SEATA_RAFT_GROUP, getNode().getOptions().getInitialConf(), newConf);
+                    node.changePeers(newConf, null);
                 }
             }
         }
