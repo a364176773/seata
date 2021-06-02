@@ -29,12 +29,14 @@ import com.alipay.sofa.jraft.option.NodeOptions;
 import com.alipay.sofa.jraft.rpc.RaftRpcServerFactory;
 import com.alipay.sofa.jraft.rpc.RpcServer;
 import io.seata.common.loader.LoadLevel;
+import io.seata.config.ConfigurationCache;
 import io.seata.config.ConfigurationChangeEvent;
 import io.seata.config.ConfigurationChangeListener;
 import io.seata.core.constants.ConfigurationKeys;
 import io.seata.core.raft.AbstractRaftServer;
 import io.seata.core.raft.AbstractRaftStateMachine;
 import io.seata.core.raft.RaftServer;
+import io.seata.core.raft.RaftServerFactory;
 import org.apache.commons.io.FileUtils;
 
 
@@ -69,6 +71,7 @@ public class RaftServerImpl extends AbstractRaftServer implements ConfigurationC
         // Initialize the raft Group service framework
         this.raftGroupService = new RaftGroupService(groupId, serverId, nodeOptions, rpcServer);
         this.cliService = RaftServiceFactory.createAndInitCliService(new CliOptions());
+        ConfigurationCache.addConfigListener(ConfigurationKeys.SERVER_RAFT_CLUSTER, this);
         this.node = this.raftGroupService.start();
     }
 
@@ -102,7 +105,8 @@ public class RaftServerImpl extends AbstractRaftServer implements ConfigurationC
 
     @Override
     public void onChangeEvent(ConfigurationChangeEvent event) {
-        if (ConfigurationKeys.SERVER_RAFT_CLUSTER.equals(event.getDataId())) {
+        if (RaftServerFactory.getInstance().isLeader()
+            && ConfigurationKeys.SERVER_RAFT_CLUSTER.equals(event.getDataId())) {
             final Configuration newConf = new Configuration();
             if (newConf.parse(event.getNewValue())) {
                 Node node = getNode();
